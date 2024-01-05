@@ -1,7 +1,7 @@
-Package: stabest
+Package: stabest2
 Type: Package
 Title: Two-Sided Preference Estimation in Matching Market
-Version: 0.9
+Version: 0.92
 Date: 2019-10-31
 Author: Thilo Klein, Robert Aue
 Maintainer: Robert Aue <robert.aue@hotmail.de>

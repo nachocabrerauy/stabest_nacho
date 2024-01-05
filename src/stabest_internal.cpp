@@ -30,7 +30,7 @@ using namespace Rcpp;
 //using namespace arma;
 
 #ifndef DEBUG
-	#define ARMA_NO_DEBUG
+#define ARMA_NO_DEBUG
 #endif
 
 
@@ -46,15 +46,15 @@ using namespace Rcpp;
 //
 
 // [[Rcpp::export]]
-List stabest_internal(
+List stabest2_internal(
     Rcpp::NumericVector Vc, // students' valuation over colleges
     Rcpp::NumericVector Vs, // colleges' valuations over students
     arma::sp_mat Xc, // variables that drive students' preferences over colleges 
     arma::sp_mat XcXcInv, // pre-computed in R because sparse matrix inversion requires extra library in Rcpp
-    arma::sp_mat Xs, // variables that drive colleges' preferences over students
-    arma::sp_mat XsXsInv, // pre-computed in R because sparse matrix inversion requires extra library in Rcpp
+    //arma::sp_mat Xs, // variables that drive colleges' preferences over students
+    //arma::sp_mat XsXsInv, // pre-computed in R because sparse matrix inversion requires extra library in Rcpp
     Rcpp::NumericMatrix betaR, // vector of coefficients driving students' prefs over colleges, 1 col and student.nCoef rows
-    Rcpp::NumericMatrix gammaR, // vector of coefs driving colleges' prefs over students, 1 col and college.nCoef rows
+    //Rcpp::NumericMatrix gammaR, // vector of coefs driving colleges' prefs over students, 1 col and college.nCoef rows
     Rcpp::LogicalVector VacantSeats, // VacantSeats[i]=1 if college i has vacant seats, vector of length nColleges
     Rcpp::IntegerVector nObs_college, // nObs_college[c] gives the number of observations that college c has
     Rcpp::IntegerVector ID_eqCollege, // ID_ of equilibrium college for each student (R index, cycles)
@@ -80,7 +80,7 @@ List stabest_internal(
   
   // preliminaries and dimension checks
 #ifdef DEBUG
-	Rcpp::Rcout << "Preliminary checks ...\n" << std::flush;
+  Rcpp::Rcout << "Preliminary checks ...\n" << std::flush;
 #endif
   int nColleges = VacantSeats.size();
   assert( nObs_college.size() == nColleges );
@@ -88,7 +88,7 @@ List stabest_internal(
   unsigned int nData = Vc.size();
   assert( Vs.size() == nData );
   assert( Xc.n_rows == nData );
-  assert( Xs.n_rows == nData );
+  //assert( Xs.n_rows == nData );
   assert( ID_sBetter.size() == nData );
   assert( ID_cBetter.size() == nData );
   assert( ID_sWorse.size() == nData );
@@ -102,15 +102,15 @@ List stabest_internal(
   assert( XcXcInv.n_cols == XcXcInv.n_rows );
   assert( (int) XcXcInv.n_cols == betaR.nrow() );
   assert( betaR.ncol() == 1);
-  assert( XsXsInv.n_cols == XsXsInv.n_rows );
-  assert( (int) XsXsInv.n_cols == gammaR.nrow() );
-  assert( gammaR.ncol() == 1);
+  //assert( XsXsInv.n_cols == XsXsInv.n_rows );
+  //assert( (int) XsXsInv.n_cols == gammaR.nrow() );
+  //assert( gammaR.ncol() == 1);
   
   clock_t begin = 0, begin2 = 0, draw_time = 0, loop_time=0;
   
   
   // count number of obs per student (needed for demeaning)
-
+  
   Rcpp::IntegerVector nObs_student(nStudents);
   for (int s=0; s<nStudents; s++) nObs_student[s] = 0;
   for (int i=0; i<sid.size(); i++) nObs_student[sid[i]-1] = std::max(1, nObs_student[sid[i]-1]+1); // since we divide by it, we don't want a zero here.
@@ -135,63 +135,63 @@ List stabest_internal(
   
   
   // set up projection matrices
- #ifdef DEBUG
-	Rcpp::Rcout << "Set up projection matrices ...\n" << std::flush;
+#ifdef DEBUG
+  Rcpp::Rcout << "Set up projection matrices ...\n" << std::flush;
 #endif
   arma::mat Proj_Xc( XcXcInv * trans(Xc) ); // NB: although design matrix may be sparse, projection matrix is probably dense
-  arma::mat Proj_Xs( XsXsInv * trans(Xs) );
- #ifdef DEBUG
-	Rcpp::Rcout << "Set up dense versions of inv(X'X) ...\n" << std::flush;
+  //arma::mat Proj_Xs( XsXsInv * trans(Xs) );
+#ifdef DEBUG
+  Rcpp::Rcout << "Set up dense versions of inv(X'X) ...\n" << std::flush;
 #endif
   arma::mat XcXcInv_dense(XcXcInv); // quick & dirty, need dense matrix for cholesky decomp
-  arma::mat XsXsInv_dense(XsXsInv); // quick & dirty, need dense matrix for cholesky decomp
+  //arma::mat XsXsInv_dense(XsXsInv); // quick & dirty, need dense matrix for cholesky decomp
   
   
   
   
   // set up coefficient matrices
 #ifdef DEBUG
-	Rcpp::Rcout << "Set up coefficient matrices ...\n" << std::flush;
+  Rcpp::Rcout << "Set up coefficient matrices ...\n" << std::flush;
 #endif
   arma::colvec beta = Rcpp::as<arma::colvec>( betaR );
   arma::colvec beta_hat = Rcpp::as<arma::colvec>( betaR );
-  arma::colvec gamma = Rcpp::as<arma::colvec>( gammaR );
-  arma::colvec gamma_hat = Rcpp::as<arma::colvec>( gammaR );
+  //arma::colvec gamma = Rcpp::as<arma::colvec>( gammaR );
+  //arma::colvec gamma_hat = Rcpp::as<arma::colvec>( gammaR );
   
   
   
   
   // set up sample paths
 #ifdef DEBUG
-	Rcpp::Rcout << "Set up sample paths ...\n" << std::flush;
+  Rcpp::Rcout << "Set up sample paths ...\n" << std::flush;
 #endif
   int Nsamples = floor(niter / thin);
   arma::mat betavalues = arma::zeros(Nsamples, Xc.n_cols);
-  arma::mat gammavalues = arma::zeros(Nsamples, Xs.n_cols);
+  //arma::mat gammavalues = arma::zeros(Nsamples, Xs.n_cols);
   
   
   
   
   // set up vectors for latent and mean utility
 #ifdef DEBUG
-	Rcpp::Rcout << "Set up vectors for latent and mean utility ...\n" << std::flush;
+  Rcpp::Rcout << "Set up vectors for latent and mean utility ...\n" << std::flush;
 #endif
   arma::colvec Xc_beta = arma::zeros( Vs.size() );
-  arma::colvec Xs_gamma = arma::zeros( Vc.size() );
+  //arma::colvec Xs_gamma = arma::zeros( Vc.size() );
   arma::colvec Vc_GroupMean = arma::zeros( nStudents );
-  arma::colvec Vs_GroupMean = arma::zeros( nColleges );
+  //arma::colvec Vs_GroupMean = arma::zeros( nColleges );
   Rcpp::NumericVector Vs_min(nColleges);
-  Rcpp::NumericVector Vs_maxUnacceptable(nColleges); // max of unacceptable valuations
+  //Rcpp::NumericVector Vs_maxUnacceptable(nColleges); // max of unacceptable valuations
   Rcpp::NumericVector Vc_maxUnacceptable(nStudents);
   
   // initialize utility vectors
 #ifdef DEBUG
-	Rcpp::Rcout << "Initialize utility vectors ...\n" << std::flush;
+  Rcpp::Rcout << "Initialize utility vectors ...\n" << std::flush;
 #endif
   Xc_beta = Rcpp::as<arma::colvec>( Vc );
-  Xs_gamma = Rcpp::as<arma::colvec>( Vs );
-  for (int c=0; c<nColleges; c++) Vs_min[c] = INF; // start with +INF to get the minimum across assigned students
-  for (int c=0; c<nColleges; c++) Vs_maxUnacceptable[c] = - INF;
+  //Xs_gamma = Rcpp::as<arma::colvec>( Vs );
+  //for (int c=0; c<nColleges; c++) Vs_min[c] = INF; // start with +INF to get the minimum across assigned students
+  //for (int c=0; c<nColleges; c++) Vs_maxUnacceptable[c] = - INF;
   for (int s=0; s<nStudents; s++) Vc_maxUnacceptable[s] = - INF;
   int idx_cs=0;
   int s = 0;
@@ -200,24 +200,24 @@ List stabest_internal(
       s = sid[idx_cs] - 1; // data could be irregular so that we need a lookup for the student here, converted to C indexing
       if (match[idx_cs]) Vs_min[c] = std::min(Vs_min[c], Vs[idx_cs]); // update the minimum of the college's valuation over all matched students
       if (ID_cWorse[idx_cs]==-2) Vc_maxUnacceptable[s] = std::max(Vc_maxUnacceptable[s], Vc[idx_cs]); // if c is unacceptable to s, update max of unacceptable valuations
-//#ifdef DEBUG
+      //#ifdef DEBUG
       //Rcpp::Rprintf("c=%d, idx=%d, ID_cWorse=%d, Vs_maxUnacceptable=%f, Xs_gamma=%f, ", c, idx_cs, ID_sWorse[idx_cs], Vs_maxUnacceptable[c], Vs[idx_cs]);
       //Rcpp::Rprintf("Vs_maxUnacceptable[c] > Vc[idx_cs] yields %d\n", Vs_maxUnacceptable[c] > Vs[idx_cs] );
       //Rcpp::Rprintf("FMAX() = %f, std::max() = %f\n", FMAX(Vs_maxUnacceptable[c], Xs_gamma[idx_cs]), std::max(Vs_maxUnacceptable[c], Xs_gamma[idx_cs]));
-//#endif
-      if (ID_sWorse[idx_cs]==-2) Vs_maxUnacceptable[c] = std::max(Vs_maxUnacceptable[c], Vs[idx_cs]); // if s is unacceptable to c, update max of unacceptable valuations over students
-      idx_cs += 1;
+      //#endif
+      //    if (ID_sWorse[idx_cs]==-2) Vs_maxUnacceptable[c] = std::max(Vs_maxUnacceptable[c], Vs[idx_cs]); // if s is unacceptable to c, update max of unacceptable valuations over students
+      //    idx_cs += 1;
     }
   }
-  for (int c=0; c<nColleges; c++) if (std::isinf(  Vs_min[c] ) ) Vs_min[c] = -INF; // now set to -INF if the college has no students (since Vs_min serves as a lower bound)
+  //  for (int c=0; c<nColleges; c++) if (std::isinf(  Vs_min[c] ) ) Vs_min[c] = -INF; // now set to -INF if the college has no students (since Vs_min serves as a lower bound)
   
-// #ifdef DEBUG
+  // #ifdef DEBUG
   // Rcpp::Rprintf("\nInitial state of utility vectors:\n");
   // Rcpp::Rcout << "Xc_beta: " << Xc_beta << std::endl;
   // Rcpp::Rcout << "Xs_gamma: " << Xs_gamma << std::endl;
   // for (int c=0; c<nColleges; c++) Rcpp::Rprintf("c=%d, Vs_min=%f, Vs_max_unacceptable=%f\n", c, Vs_min[c], Vs_maxUnacceptable[c]);
   // for (int s=0; s<nStudents; s++) Rcpp::Rprintf("s=%d, Vc_max_unacceptable=%f\n", s, Vc_maxUnacceptable[s]);
-// #endif
+  // #endif
   
   
   
@@ -228,7 +228,7 @@ List stabest_internal(
   int chunk10percent = floor( (double) niter / (double) 10);
   
 #ifdef DEBUG
-	Rcpp::Rcout << "Start main iteration loop ...\n" << std::flush;
+  Rcpp::Rcout << "Start main iteration loop ...\n" << std::flush;
 #endif
   
   
@@ -249,21 +249,21 @@ List stabest_internal(
     
     // reset / init temporary variables
     
-    double Vcupperbar=INF, Vsupperbar=INF, Vclowerbar=-INF, Vslowerbar=-INF, 
-      Vs_tmp=0, Vc_tmp=0, Vs_cs=0, Vc_cs=0, Vs_min_c=0;
+    double Vcupperbar=INF, Vclowerbar=-INF, Vc_tmp=0, Vc_cs=0, Vs_cs=0, Vs_min_c=0;  
+    //, Vslowerbar=-INF, Vs_tmp=0, Vsupperbar=INF, 
     bool match_cs = false, HasVacantSeats_c=false;
     idx_cs = 0; // current position of college c and student s
     int idx_c_start = 0; // start position of college c
-    int idx_eqCollege_s = 0, idx_eqCollege_sprime=0; // position of the equilibrium college of student s
+    int idx_eqCollege_s = 0, idx_eqCollege_sprime=0;//  // position of the equilibrium college of student s
     int idx_cprimes = 0; // position of college cprime and studen s
     int idx_tmp = 0; // temporary index
     int nObs_c = 0; // number of observations for this college
-	  int cprime = 0; // cid of alternative college
+    int cprime = 0; // cid of alternative college
     s = 0; // student ID
     arma::uword idx_cs_uword = 0; // index, converted to unsigned (for arma vectors)
     if (demean) {
       Vc_GroupMean *= 0;
-      Vs_GroupMean *= 0;
+      //Vs_GroupMean *= 0;
     }
     
     
@@ -287,9 +287,9 @@ List stabest_internal(
         
         // reset bounds 
         
-        Vcupperbar=INF, Vsupperbar=INF, Vclowerbar=-INF, Vslowerbar=-INF;
-
-
+        Vcupperbar=INF,  Vclowerbar=-INF; // ,Vsupperbar=INF, Vslowerbar=-INF
+        
+        
 #ifdef DEBUG
         Rcpp::Rcout << "\n**************************************************************************\n";
         Rcpp::Rprintf("iter=%d, idx=%d, c=%d, s=%d, match_cs=%d, idx_eqCollege_s=%d\n", iter, idx_cs, c, s, match_cs, idx_eqCollege_s);
@@ -306,43 +306,43 @@ List stabest_internal(
         //--- equilibrium bounds -----------------------------------------------------------//
         
 #ifdef DEBUG
-          Rcpp::Rcout << "Find student's eq. bounds ..\n" << std::flush;
+        Rcpp::Rcout << "Find student's eq. bounds ..\n" << std::flush;
 #endif
         if (idx_eqCollege_s>=0) { // if student s is matched to _some_ school
-		
-    		  if(match_cs == 0){  // case 1: non-equilibrium matches
-    			  
-				    // if s is not unacceptable to school c AND
-    			  //   - student's valuation is higher than minimum of college's students (so college prefers student) [Eqn (A4)] OR
-				    //   - c has a vacant seat ...
-    			  if( ID_sWorse[idx_cs]!=-2 && (( Vs_cs > Vs_min_c ) || HasVacantSeats_c ) ){
-    				  // ... then college's valuation has to be lower than that of student's equilibrium college
-    				  Vcupperbar = std::min( Vcupperbar, Vc[idx_eqCollege_s] ); 
-    			  }
-    			  
-    			} else {  // case 2: equilibrium matches
-				    
-    			  // check all other colleges: if student s could get in, set Vc so that he does not want to go there
-    			  idx_cprimes = idx_cs;
-					  cprime = c;
-					  
-					  // get record number of next college until we reach idx_cs again, converting R style ID_ index to C style 0 based index along the way
-					  // we don't need to check college c again because student can only be matched to one college, so only nColleges - 1 remain
-    			  while( (idx_cprimes = ID_nextCollege[idx_cprimes] - 1) != idx_cs ){ 
-    			    
-    				  cprime = get_cid(idx_cprimes, idx_college_start); // find college ID of next college, using the lookup utility
-					    
-						  // if s is not unacceptable to cprime AND
-    					//   - student's valuation is higher than minimum of cprime's students (so college prefers student) [Eqn (A6)] OR
-						  //   - cprime has a vacant seat ...
-    					if( ID_sWorse[idx_cprimes]!=-2 && ( Vs[idx_cprimes] > Vs_min[cprime] || VacantSeats[cprime] ) ){
-    					  
-    					  // ... then student must value college i higher than iprime [Eqn (A11) = Eqn (A15_b), term 1]
-    						Vclowerbar = std::max( Vclowerbar, Vc[idx_cprimes] ); 
-    					  
-    					} // end if
-				    } // end loop over schools
-    			} // non-equilibrium vs. equilibrium 
+          
+          if(match_cs == 0){  // case 1: non-equilibrium matches
+            
+            // if s is not unacceptable to school c AND
+            //   - student's valuation is higher than minimum of college's students (so college prefers student) [Eqn (A4)] OR
+            //   - c has a vacant seat ...
+            if( ID_sWorse[idx_cs]!=-2 && (( Vs_cs > Vs_min_c ) || HasVacantSeats_c ) ){
+              // ... then college's valuation has to be lower than that of student's equilibrium college
+              Vcupperbar = std::min( Vcupperbar, Vc[idx_eqCollege_s] ); 
+            }
+            
+          } else {  // case 2: equilibrium matches
+            
+            // check all other colleges: if student s could get in, set Vc so that he does not want to go there
+            idx_cprimes = idx_cs;
+            cprime = c;
+            
+            // get record number of next college until we reach idx_cs again, converting R style ID_ index to C style 0 based index along the way
+            // we don't need to check college c again because student can only be matched to one college, so only nColleges - 1 remain
+            while( (idx_cprimes = ID_nextCollege[idx_cprimes] - 1) != idx_cs ){ 
+              
+              cprime = get_cid(idx_cprimes, idx_college_start); // find college ID of next college, using the lookup utility
+              
+              // if s is not unacceptable to cprime AND
+              //   - student's valuation is higher than minimum of cprime's students (so college prefers student) [Eqn (A6)] OR
+              //   - cprime has a vacant seat ...
+              if( ID_sWorse[idx_cprimes]!=-2 && ( Vs[idx_cprimes] > Vs_min[cprime] || VacantSeats[cprime] ) ){
+                
+                // ... then student must value college i higher than iprime [Eqn (A11) = Eqn (A15_b), term 1]
+                Vclowerbar = std::max( Vclowerbar, Vc[idx_cprimes] ); 
+                
+              } // end if
+            } // end loop over schools
+          } // non-equilibrium vs. equilibrium 
         } // end if
         
         
@@ -351,7 +351,7 @@ List stabest_internal(
         
         
 #ifdef DEBUG
-          Rcpp::Rcout << "Determine student's rank order bounds ..\n" << std::flush;
+        Rcpp::Rcout << "Determine student's rank order bounds ..\n" << std::flush;
 #endif
         // recall that ID_cWorse and ID_cBetter uses R indexing, 0 indicates NA (no rank order bound)
         
@@ -367,7 +367,7 @@ List stabest_internal(
         //--- draw new valuations that respect the bounds --------------------------------------//
         
 #ifdef DEBUG
-          Rcpp::Rcout << "Drawing student's new latent valuation over college ..\n" << std::flush;
+        Rcpp::Rcout << "Drawing student's new latent valuation over college ..\n" << std::flush;
 #endif
         if(Vclowerbar < Vcupperbar)
           Vc_cs = TRUNCNORM(Xc_beta[ idx_cs_uword ], 1.0, Vclowerbar, Vcupperbar); // mu, sigma, lower, upper
@@ -406,129 +406,129 @@ List stabest_internal(
         //----------------------------------------------------------------------------------//
         // --- college c's valuation over student s ----------------------------------------//
         //----------------------------------------------------------------------------------//
-        
-#ifdef DEBUG
-        Rcpp::Rprintf("\nCollege %d's valuation over student %d:\n", c, s);
-#endif
-        //--- equilibrium bounds -----------------------------------------------------------//
-        
-#ifdef DEBUG
-          Rcpp::Rcout << "Determine college's eq. bounds ..\n" << std::flush;
-#endif
-        //  the following if-else applies only to colleges that are at full capacity:
-        if ( !HasVacantSeats_c ) {
-			
-          if(match_cs == 0){  // case 1: non-equilibrium matches
-		  
-            // if student prefers college to current match (Eqn (A3))
-      		  if (idx_eqCollege_s>=0) { // case 1.1: student s is matched to _some_ school
-      			  if( Vc_cs > Vc[idx_eqCollege_s] ){ // if student would prefer going to s instead of his eq. college ...
-      				  // ... then students' valuation has to be lower than that of worst student attending the college
-      				  Vsupperbar = std::min( Vsupperbar, Vs_min_c );
-      				}
-      			} else if (idx_tmp!=-2) { // case 1.2: student s is not matched to any school, then if idx_tmp!=-2 indicates that school c is not unacceptable to student s
-					    Vsupperbar = std::min( Vsupperbar, Vs_min_c ); // .. we can also bound this valuation
-				    }
-				
-          } else {  // case 2: equilibrium matches
-		  
-      		  for(  int idx_csprime=idx_c_start; idx_csprime < idx_c_start+nObs_c; idx_csprime++ ){ // go through all students
-						
-						// case 2.1: student sprime is matched to _some_ school
-    				  if ( (idx_eqCollege_sprime = ID_eqCollege[sid[idx_csprime]-1] -1) >= 0 ) { 
-					    
-    					  if( match[idx_csprime]==0 ){ // if college not matched to student sprime ...
-      						// ... but student jprime values i over his equilibrium school (Eqn (A9))
-      						if( Vc[idx_csprime] > Vc[ idx_eqCollege_sprime ] ){ 
-      						  // ... then school must value student s higher than sprime (Eqn (A10), term 1).
-      						  Vslowerbar = std::max( Vslowerbar, Vs[idx_csprime] );
-      						}
-    					  } // end if: student sprime is not matched to college c
-						  
-    				  } else if (ID_cWorse[idx_csprime]!=-2 ) { // case 2.2: student sprime is not matched to _any_ school, then if school c is not unacceptable to student sprime ...
-					      
-						    Vslowerbar = std::max( Vslowerbar, Vs[idx_csprime] ); // ... we can also bound the valuation
-						    
-					    } // end if
-				    } // end for: loop over students
-    	    } // non-equilibrium vs. equilibrium 
-        } // end of vacant seats
-		
-#ifdef DEBUG
-        Rcpp::Rprintf("Equilibrium bounds: Vsupperbar = %f, Vslowerbar = %f\n", Vsupperbar, Vslowerbar);
-#endif
-#ifdef DEBUG2
-        Rcpp::Rprintf("0 ");  
-#endif
-        
-        //--- rank order list bounds ---------------------------------------------------------//
-        
-#ifdef DEBUG
-          Rcpp::Rcout << "Determine college's rank order bounds ..\n" << std::flush;
-#endif
-        if( (idx_tmp = ID_sBetter[idx_cs]) ){
-          // student j's valuation over the college that j ranks just above college i.
-          Vsupperbar = std::min( Vsupperbar, Vs[ idx_tmp - 1 ] );
-        }  
-        if( (idx_tmp = ID_sWorse[idx_cs]) > 0 ){ // recall that ID_sWorse and ID_sBetter uses R indexing, 0 indicates NA (no rank order bound)
-          Vslowerbar = std::max( Vslowerbar, Vs[ idx_tmp - 1  ]);  // colleges valuation over the student that c ranks just below student s.
-        } else if (idx_tmp==-1) { // -1 indicates that the lower bound is the max of all unacceptable students (could by -INF if no unacceptable ones exist)
-            Vslowerbar = std::max( Vslowerbar, Vs_maxUnacceptable[ c ]);
-        }
-#ifdef DEBUG2
-        Rcpp::Rprintf("1 ");  
-#endif
-        
-        
-        //--- draw new valuations that respect the bounds -----------------------------------//
-        
-#ifdef DEBUG
-        Rcpp::Rcout << "Drawing college's new latent valuation of student ..\n" << std::flush;
-#endif
-        Vs_cs = (Vslowerbar < Vsupperbar) ? TRUNCNORM(Xs_gamma[ idx_cs_uword ], 1.0, Vslowerbar, Vsupperbar) : Vsupperbar; // mu, sigma, lower, upper
-	      Vs[idx_cs] = Vs_cs;
-        if (demean) Vs_GroupMean[c] += Vs_cs;
-#ifdef DEBUG2
-        Rcpp::Rprintf("2 ");  
-#endif
-        // update Vs_min if student j and college i are matched
-        
-          
-        if (match_cs) {
-          if ( Vs_cs < Vs_min_c  )  Vs_min[c] = Vs_cs ; // here it is easy to update
-          else { // now we need to find a new minimum
-            // Vs_min(t)(i) = arma::min( Vs(t)( M(t)(iprimeuvec,studentIds(L(t)(iprime))))) ;
-            Vs_tmp = INF;
-            for(  int idx_csprime=idx_c_start; idx_csprime < idx_c_start+nObs_c; idx_csprime++ ) {
-              Vs_tmp = match[idx_csprime] ? std::min( Vs_tmp, Vs[idx_csprime]  ) : Vs_tmp;
-            }
-            Vs_min[c] = Vs_tmp;
-          }
-        }
-
-#ifdef DEBUG2
-        Rcpp::Rprintf("3 ");  
-#endif
+        //        
+        //#ifdef DEBUG
+        //        Rcpp::Rprintf("\nCollege %d's valuation over student %d:\n", c, s);
+        //#endif
+        //        //--- equilibrium bounds -----------------------------------------------------------//
+        //        
+        //#ifdef DEBUG
+        //          Rcpp::Rcout << "Determine college's eq. bounds ..\n" << std::flush;
+        //#endif
+        //        //  the following if-else applies only to colleges that are at full capacity:
+        //        if ( !HasVacantSeats_c ) {
+        //			
+        //          if(match_cs == 0){  // case 1: non-equilibrium matches
+        //		  
+        //            // if student prefers college to current match (Eqn (A3))
+        //      		  if (idx_eqCollege_s>=0) { // case 1.1: student s is matched to _some_ school
+        //      			  if( Vc_cs > Vc[idx_eqCollege_s] ){ // if student would prefer going to s instead of his eq. college ...
+        //      				  // ... then students' valuation has to be lower than that of worst student attending the college
+        //      				  Vsupperbar = std::min( Vsupperbar, Vs_min_c );
+        //      				}
+        //      			} else if (idx_tmp!=-2) { // case 1.2: student s is not matched to any school, then if idx_tmp!=-2 indicates that school c is not unacceptable to student s
+        //					    Vsupperbar = std::min( Vsupperbar, Vs_min_c ); // .. we can also bound this valuation
+        //				    }
+        //				
+        //          } else {  // case 2: equilibrium matches
+        //		  
+        //      		  for(  int idx_csprime=idx_c_start; idx_csprime < idx_c_start+nObs_c; idx_csprime++ ){ // go through all students
+        //						
+        //						// case 2.1: student sprime is matched to _some_ school
+        //    				  if ( (idx_eqCollege_sprime = ID_eqCollege[sid[idx_csprime]-1] -1) >= 0 ) { 
+        //					    
+        //    					  if( match[idx_csprime]==0 ){ // if college not matched to student sprime ...
+        //      						// ... but student jprime values i over his equilibrium school (Eqn (A9))
+        //      						if( Vc[idx_csprime] > Vc[ idx_eqCollege_sprime ] ){ 
+        //      						  // ... then school must value student s higher than sprime (Eqn (A10), term 1).
+        //      						  Vslowerbar = std::max( Vslowerbar, Vs[idx_csprime] );
+        //      						}
+        //    					  } // end if: student sprime is not matched to college c
+        //						  
+        //    				  } else if (ID_cWorse[idx_csprime]!=-2 ) { // case 2.2: student sprime is not matched to _any_ school, then if school c is not unacceptable to student sprime ...
+        //					      
+        //						    Vslowerbar = std::max( Vslowerbar, Vs[idx_csprime] ); // ... we can also bound the valuation
+        //						    
+        //					    } // end if
+        //				    } // end for: loop over students
+        //    	    } // non-equilibrium vs. equilibrium 
+        //        } // end of vacant seats
+        //		
+        //#ifdef DEBUG
+        //        Rcpp::Rprintf("Equilibrium bounds: Vsupperbar = %f, Vslowerbar = %f\n", Vsupperbar, Vslowerbar);
+        //#endif
+        //#ifdef DEBUG2
+        //        Rcpp::Rprintf("0 ");  
+        //#endif
+        //        
+        //        //--- rank order list bounds ---------------------------------------------------------//
+        //        
+        //#ifdef DEBUG
+        //          Rcpp::Rcout << "Determine college's rank order bounds ..\n" << std::flush;
+        //#endif
+        //        if( (idx_tmp = ID_sBetter[idx_cs]) ){
+        //          // student j's valuation over the college that j ranks just above college i.
+        //          Vsupperbar = std::min( Vsupperbar, Vs[ idx_tmp - 1 ] );
+        //        }  
+        //        if( (idx_tmp = ID_sWorse[idx_cs]) > 0 ){ // recall that ID_sWorse and ID_sBetter uses R indexing, 0 indicates NA (no rank order bound)
+        //          Vslowerbar = std::max( Vslowerbar, Vs[ idx_tmp - 1  ]);  // colleges valuation over the student that c ranks just below student s.
+        //        } else if (idx_tmp==-1) { // -1 indicates that the lower bound is the max of all unacceptable students (could by -INF if no unacceptable ones exist)
+        //            Vslowerbar = std::max( Vslowerbar, Vs_maxUnacceptable[ c ]);
+        //        }
+        //#ifdef DEBUG2
+        //        Rcpp::Rprintf("1 ");  
+        //#endif
+        //        
+        //        
+        //        //--- draw new valuations that respect the bounds -----------------------------------//
+        //        
+        //#ifdef DEBUG
+        //        Rcpp::Rcout << "Drawing college's new latent valuation of student ..\n" << std::flush;
+        //#endif
+        //        Vs_cs = (Vslowerbar < Vsupperbar) ? TRUNCNORM(Xs_gamma[ idx_cs_uword ], 1.0, Vslowerbar, Vsupperbar) : Vsupperbar; // mu, sigma, lower, upper
+        //	      Vs[idx_cs] = Vs_cs;
+        //        if (demean) Vs_GroupMean[c] += Vs_cs;
+        //#ifdef DEBUG2
+        //        Rcpp::Rprintf("2 ");  
+        //#endif
+        //        // update Vs_min if student j and college i are matched
+        //        
+        //          
+        //        if (match_cs) {
+        //          if ( Vs_cs < Vs_min_c  )  Vs_min[c] = Vs_cs ; // here it is easy to update
+        //          else { // now we need to find a new minimum
+        //            // Vs_min(t)(i) = arma::min( Vs(t)( M(t)(iprimeuvec,studentIds(L(t)(iprime))))) ;
+        //            Vs_tmp = INF;
+        //            for(  int idx_csprime=idx_c_start; idx_csprime < idx_c_start+nObs_c; idx_csprime++ ) {
+        //              Vs_tmp = match[idx_csprime] ? std::min( Vs_tmp, Vs[idx_csprime]  ) : Vs_tmp;
+        //            }
+        //            Vs_min[c] = Vs_tmp;
+        //          }
+        //        }
+        //
+        //#ifdef DEBUG2
+        //        Rcpp::Rprintf("3 ");  
+        //#endif
         // update the max of unranked Vs if s is unacceptable to c
         
         
-        if (idx_tmp==-2) { // if student s is unacceptable to college c, need to update
-          if ( Vs_cs > Vs_maxUnacceptable[ c ]) Vs_maxUnacceptable[ c ] = Vs_cs; // here it is easy to update
-          else { // else we search through all unacceptable ones and find the new max
-            Vs_tmp = -INF;
-            for(  int idx_csprime=idx_c_start; idx_csprime < idx_c_start+nObs_c; idx_csprime++ )
-              if ( ID_sWorse[idx_csprime] == -2 ) Vs_tmp = std::max(Vs_tmp, Vs[idx_csprime]);
-            Vs_maxUnacceptable[ c ] = Vs_tmp;
-          }
-        }
-        
-#ifdef DEBUG
-        Rcpp::Rprintf("Rank order bounds:  Vsupperbar = %f, Vslowerbar = %f\n", Vsupperbar, Vslowerbar);
-        Rcpp::Rprintf("Vs_hat = %f, Vs = %f\n", Xs_gamma[ idx_cs_uword ], Vs_cs);
-        Rcpp::Rprintf("Vs_maxUnacceptable = %f, Vs_min = %f, Vs_GroupMean = %f\n", Vs_maxUnacceptable[ c ], Vs_min[ c ], Vs_GroupMean[ c ]);
-        if (idx_tmp==-2) Rcpp::Rprintf("Student %d is unacceptable to college %d\n", s, c);
-#endif
-        
+        //        if (idx_tmp==-2) { // if student s is unacceptable to college c, need to update
+        //          if ( Vs_cs > Vs_maxUnacceptable[ c ]) Vs_maxUnacceptable[ c ] = Vs_cs; // here it is easy to update
+        //          else { // else we search through all unacceptable ones and find the new max
+        //            Vs_tmp = -INF;
+        //            for(  int idx_csprime=idx_c_start; idx_csprime < idx_c_start+nObs_c; idx_csprime++ )
+        //              if ( ID_sWorse[idx_csprime] == -2 ) Vs_tmp = std::max(Vs_tmp, Vs[idx_csprime]);
+        //            Vs_maxUnacceptable[ c ] = Vs_tmp;
+        //          }
+        //        }
+        //        
+        //#ifdef DEBUG
+        //        Rcpp::Rprintf("Rank order bounds:  Vsupperbar = %f, Vslowerbar = %f\n", Vsupperbar, Vslowerbar);
+        //        Rcpp::Rprintf("Vs_hat = %f, Vs = %f\n", Xs_gamma[ idx_cs_uword ], Vs_cs);
+        //        Rcpp::Rprintf("Vs_maxUnacceptable = %f, Vs_min = %f, Vs_GroupMean = %f\n", Vs_maxUnacceptable[ c ], Vs_min[ c ], Vs_GroupMean[ c ]);
+        //        if (idx_tmp==-2) Rcpp::Rprintf("Student %d is unacceptable to college %d\n", s, c);
+        //#endif
+        //        
         
         // increment indices
         idx_cs += 1;
@@ -537,26 +537,26 @@ List stabest_internal(
       } // end obs belonging to college i (students, but not necessarily all of them)
     } // end college i
     
-		
+    
     // compute Vs and Vc group means, and subtract means
     if (demean) {
 #ifdef DEBUG
-          Rcpp::Rcout << "Compute Vs and Vc group means, and subtract means ..\n" << std::flush;
+      Rcpp::Rcout << "Compute Vs and Vc group means, and subtract means ..\n" << std::flush;
 #endif
-  	  for (int s=0; s<nStudents; s++) {
-  		  Vc_GroupMean[s] /= nObs_student[s];
-  		  Vc_maxUnacceptable[s] -= Vc_GroupMean[s];
-  	  }
-  	  idx_cs = 0;
+      for (int s=0; s<nStudents; s++) {
+        Vc_GroupMean[s] /= nObs_student[s];
+        Vc_maxUnacceptable[s] -= Vc_GroupMean[s];
+      }
+      idx_cs = 0;
       for (int c=0; c <nColleges; c++){
-          
-  		  Vs_GroupMean[c] /= nObs_college[c];
-        Vs_min[c] -= Vs_GroupMean[c];
-  		  Vs_maxUnacceptable[c] -= Vs_GroupMean[c];
-          
+        
+        //   Vs_GroupMean[c] /= nObs_college[c];
+        //   Vs_min[c] -= Vs_GroupMean[c];
+        //   Vs_maxUnacceptable[c] -= Vs_GroupMean[c];
+        
         for(int j=0; j < nObs_college[c]; j++){
           Vc[idx_cs] -= Vc_GroupMean[sid[idx_cs]-1];
-          Vs[idx_cs] -= Vs_GroupMean[c];
+          //   Vs[idx_cs] -= Vs_GroupMean[c];
           idx_cs++;
         }
       }
@@ -571,53 +571,53 @@ List stabest_internal(
     
     // update parameter vector (problem: Vc and Vs are NumericVector, so we need to cast to an arma::colvec
     beta_hat = Proj_Xc * Rcpp::as<arma::colvec>( Vc );
-    gamma_hat = Proj_Xs * Rcpp::as<arma::colvec>( Vs );
+    //  gamma_hat = Proj_Xs * Rcpp::as<arma::colvec>( Vs );
     
     // draw new bet and gamma
     beta = mvrnormArma(beta_hat, XcXcInv_dense); //beta = Proj*Y;
-    gamma = mvrnormArma(gamma_hat, XsXsInv_dense); //beta = Proj*Y;
+    //  gamma = mvrnormArma(gamma_hat, XsXsInv_dense); //beta = Proj*Y;
     
 #ifdef DEBUG
     Rcpp::Rprintf("\nUpdated parameter vectors:\n");
     Rcpp::Rcout << "beta_hat: " << beta_hat << std::endl;
     Rcpp::Rcout << "beta: " << beta << std::endl;
-    Rcpp::Rcout << "gamma_hat: " << gamma_hat << std::endl;
-    Rcpp::Rcout << "gamma: " << gamma << std::endl;
+    //  Rcpp::Rcout << "gamma_hat: " << gamma_hat << std::endl;
+    //  Rcpp::Rcout << "gamma: " << gamma << std::endl;
 #endif
     
     // save draws
     if ( (iter % thin == 0) ) {
       betavalues.row(iter/thin) = trans(beta);
-      gammavalues.row(iter/thin) = trans(gamma);
+      //    gammavalues.row(iter/thin) = trans(gamma);
     }
     
     // update mean valuations
-    Xs_gamma = Xs * gamma;
+    //  Xs_gamma = Xs * gamma;
     Xc_beta = Xc * beta;
     
     draw_time += (clock() - begin2);
-		
-		if (!fmod(iter, chunk10percent) ) {
+    
+    if (!fmod(iter, chunk10percent) ) {
       Rcpp::Rcout << " estimated remaining time: " << ((double) draw_time + (double) loop_time) / (CLOCKS_PER_SEC * (iter+1)) * (niter - iter) << "s" << std::endl;
     }
   } // end iter
   
   
-	// print timing information
-	Rcpp::Rcout << "Total time spent in main iteration loop: " << ((double) draw_time + (double) loop_time) / CLOCKS_PER_SEC << "s" <<std::endl;
+  // print timing information
+  Rcpp::Rcout << "Total time spent in main iteration loop: " << ((double) draw_time + (double) loop_time) / CLOCKS_PER_SEC << "s" <<std::endl;
   Rcpp::Rcout << "        ... of which drawing valuations: " << (double) loop_time / CLOCKS_PER_SEC << "s" << std::endl;
   Rcpp::Rcout << "       ... of which updating parameters: " << (double) draw_time / CLOCKS_PER_SEC << "s" << std::endl << std::flush;
-
+  
   
   
   return List::create(  
     // parameter draws
     Named("betadraws") = betavalues,
-    Named("gammadraws") = gammavalues,
+    //  Named("gammadraws") = gammavalues,
     //Named("Vc") = Vc,
     //Named("Vs") = Vs,
-    Named("Vc_hat") = Xc_beta,
-    Named("Vs_hat") = Xs_gamma
+    Named("Vc_hat") = Xc_beta
+  //,  Named("Vs_hat") = Xs_gamma
   );
 }
 
