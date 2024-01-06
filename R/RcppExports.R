@@ -2,6 +2,6 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 stabest2_internal <- function(Vc, Vs, Vs_min, Xc, XcXcInv, betaR, VacantSeats, nObs_college, ID_eqCollege, match, sid, ID_cBetter, ID_cWorse, ID_sBetter, ID_sWorse, ID_nextCollege, niter, thin, demean) {
-  .Call('_stabest2_stabest_internal', PACKAGE = 'stabest2', Vc, Vs, Vs_min, Xc, XcXcInv, betaR, VacantSeats, nObs_college, ID_eqCollege, match, sid, ID_cBetter, ID_cWorse, ID_sBetter, ID_sWorse, ID_nextCollege, niter, thin, demean)
+  .Call('_stabest2_stabest2_internal', PACKAGE = 'stabest2', Vc, Vs, Vs_min, Xc, XcXcInv, betaR, VacantSeats, nObs_college, ID_eqCollege, match, sid, ID_cBetter, ID_cWorse, ID_sBetter, ID_sWorse, ID_nextCollege, niter, thin, demean)
 }
 
