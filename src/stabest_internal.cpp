@@ -49,6 +49,7 @@ using namespace Rcpp;
 List stabest2_internal(
     Rcpp::NumericVector Vc, // students' valuation over colleges
     Rcpp::NumericVector Vs, // colleges' valuations over students
+    Rcpp::NumericVector Vs_min, // colleges' valuation of worst student assigned
     arma::sp_mat Xc, // variables that drive students' preferences over colleges 
     arma::sp_mat XcXcInv, // pre-computed in R because sparse matrix inversion requires extra library in Rcpp
     //arma::sp_mat Xs, // variables that drive colleges' preferences over students
@@ -180,7 +181,7 @@ List stabest2_internal(
   //arma::colvec Xs_gamma = arma::zeros( Vc.size() );
   arma::colvec Vc_GroupMean = arma::zeros( nStudents );
   //arma::colvec Vs_GroupMean = arma::zeros( nColleges );
-  Rcpp::NumericVector Vs_min(nColleges);
+  //Rcpp::NumericVector Vs_min(nColleges);
   //Rcpp::NumericVector Vs_maxUnacceptable(nColleges); // max of unacceptable valuations
   Rcpp::NumericVector Vc_maxUnacceptable(nStudents);
   
@@ -198,7 +199,7 @@ List stabest2_internal(
   for(int c=0; c <nColleges; c++){
     for(int j=0; j < nObs_college[c]; j++){
       s = sid[idx_cs] - 1; // data could be irregular so that we need a lookup for the student here, converted to C indexing
-      if (match[idx_cs]) Vs_min[c] = std::min(Vs_min[c], Vs[idx_cs]); // update the minimum of the college's valuation over all matched students
+    //  if (match[idx_cs]) Vs_min[c] = std::min(Vs_min[c], Vs[idx_cs]); // update the minimum of the college's valuation over all matched students
       if (ID_cWorse[idx_cs]==-2) Vc_maxUnacceptable[s] = std::max(Vc_maxUnacceptable[s], Vc[idx_cs]); // if c is unacceptable to s, update max of unacceptable valuations
       //#ifdef DEBUG
       //Rcpp::Rprintf("c=%d, idx=%d, ID_cWorse=%d, Vs_maxUnacceptable=%f, Xs_gamma=%f, ", c, idx_cs, ID_sWorse[idx_cs], Vs_maxUnacceptable[c], Vs[idx_cs]);
