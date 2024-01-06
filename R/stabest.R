@@ -77,14 +77,14 @@
 #' )
 #' summary(fit5)
 #' 
-stabest2 <- function(student.prefs, college.prefs, 
+stabest2 <- function(student.prefs, 
                      student.id='s.id', college.id='c.id', match.id=NULL,
                      data, nSeats=NULL, demean=FALSE, 
                      niter=500, thin=10, burnin=50, initparm=NULL, nCores=1) UseMethod('stabest2')
 
 
 #' @export
-stabest2.default <- function(student.prefs, college.prefs, 
+stabest2.default <- function(student.prefs, 
                              student.id='s.id', college.id='c.id', match.id=NULL,
                              data, nSeats=NULL, demean=FALSE, 
                              niter=500, thin=10, burnin=50, initparm=NULL, nCores=1) {
@@ -140,15 +140,15 @@ stabest2.default <- function(student.prefs, college.prefs,
   
   # parse college preference equation
   
-  college.prefs.terms <- terms(college.prefs)																# parse equation object
-  stopifnot(attr(college.prefs.terms, 'intercept')==0)														# intercept is not identified
-  if (all.vars(college.prefs)[1]!='.') {
-    college.rankvar <- all.vars(college.prefs)[1]				# check if rank information is provided or not
-  } else {
-    college.rankvar <- NULL
-  }
-  college.varnames <- attr(college.prefs.terms, "term.labels")
-  college.regform <- update(college.prefs, Vs~.) 															# regression formula for latent valuations over colleges
+  #college.prefs.terms <- terms(college.prefs)																# parse equation object
+  #stopifnot(attr(college.prefs.terms, 'intercept')==0)														# intercept is not identified
+  #if (all.vars(college.prefs)[1]!='.') {
+  #  college.rankvar <- all.vars(college.prefs)[1]				# check if rank information is provided or not
+  #} else {
+  #  college.rankvar <- NULL
+  #}
+  #college.varnames <- attr(college.prefs.terms, "term.labels")
+  #college.regform <- update(college.prefs, Vs~.) 															# regression formula for latent valuations over colleges
   
   
   
@@ -238,51 +238,51 @@ stabest2.default <- function(student.prefs, college.prefs,
   
   # create the ranks of better and worse alternatives for colleges
   
-  if (!is.null(college.rankvar)) {
-    
-    cat("Process colleges' rank variables ...\n")
-    # create consecutive rank variable
-    data$college.rankvar <- ifelse(data[[college.rankvar]]>=0, data[[college.rankvar]], NA)
-    data <- data %>% dplyr::group_by(cid_) %>% dplyr::mutate(sRank_ = rank(college.rankvar, na.last="keep", ties.method = "random"))
-    data$college.rankvar <- NULL
-    
-    # find better and worse rank
-    data$sRank_[data[[college.rankvar]]==-1] <- -1
-    data <- data %>% dplyr::group_by(cid_) %>% dplyr::mutate(sRank_max = ifelse(all(is.na(sRank_)), NA, max(sRank_, na.rm=T)) )
-    data$sRank_better <- with(data, ifelse(sRank_==1 , NA,               # if top-ranked - there is no better student
-                                           ifelse(sRank_==-1, sRank_max,        # else if unacceptable - last ranked student is better
-                                                  sRank_-1)))                          # else the next lower ranked student is better (or NA if sRank_ == NA)
-    data$sRank_worse <- with(data, ifelse(sRank_==sRank_max, NA,         # if last ranked student - all unacceptable students are worse, need to deal with that separately
-                                          ifelse(sRank_==-1, NA,                # else if unacceptable - don't know which students are worse
-                                                 sRank_+1)))                           # else - higher ranked student is better (or NA if unknown ranking)
-    
-    # get the R-style row indices IDs of better and worse alternatives
-    # these are needed to bound valuations using the submitted rank order lists
-    data <- dplyr::left_join(x=data, y=data[data$sRank_>0, c('cid_','sRank_','ID_')], 
-                             by=c('cid_'='cid_','sRank_better'='sRank_'),
-                             suffix=c('','sBetter'))
-    data <- dplyr::left_join(x=data, y=data[data$sRank_>0, c('cid_','sRank_','ID_')], 
-                             by=c('cid_'='cid_','sRank_worse'='sRank_'),
-                             suffix=c('','sWorse'))
-    
-    # encode some more information in these indices
-    # 0 -- NA, no better/worse is determined
-    # >=1 -- ID_, R-style index of better / worse alternative
-    # for ID_sWorse: 
-    #   -1 indicates that obs is the last ranked, so lower bound is max of unacceptable IDs
-    #   -2 indicates that the current option is unacceptable (so there is no lower bound)            
-    data$ID_sBetter[is.na(data$ID_sBetter) | is.na(data$sRank_)] <- 0
-    data$ID_sWorse[is.na(data$ID_sWorse) | is.na(data$sRank_)] <- 0
-    data$ID_sWorse[data$sRank_==data$sRank_max & !is.na(data$sRank_max)] <- -1
-    data$ID_sWorse[data$sRank_==-1] <- -2
-    data$sRank_[is.na(data$sRank_)] <- 0 # encode NA as 0 too
-    
-    data$sRank_better <- data$sRank_worse <- NULL
-    
-  } else {
-    cat("Colleges' rank variables not provided ...\n")
-    data$sRank_ <- data$ID_sBetter <- data$ID_sWorse <- data$sRank_max <- 0
-  }
+  #if (!is.null(college.rankvar)) {
+  #  
+  #  cat("Process colleges' rank variables ...\n")
+  #  # create consecutive rank variable
+  #  data$college.rankvar <- ifelse(data[[college.rankvar]]>=0, data[[college.rankvar]], NA)
+  #  data <- data %>% dplyr::group_by(cid_) %>% dplyr::mutate(sRank_ = rank(college.rankvar, na.last="keep", ties.method = "random"))
+  #  data$college.rankvar <- NULL
+  #  
+  #  # find better and worse rank
+  #  data$sRank_[data[[college.rankvar]]==-1] <- -1
+  #  data <- data %>% dplyr::group_by(cid_) %>% dplyr::mutate(sRank_max = ifelse(all(is.na(sRank_)), NA, max(sRank_, na.rm=T)) )
+  #  data$sRank_better <- with(data, ifelse(sRank_==1 , NA,               # if top-ranked - there is no better student
+  #                                         ifelse(sRank_==-1, sRank_max,        # else if unacceptable - last ranked student is better
+  #                                                sRank_-1)))                          # else the next lower ranked student is better (or NA if sRank_ == NA)
+  #  data$sRank_worse <- with(data, ifelse(sRank_==sRank_max, NA,         # if last ranked student - all unacceptable students are worse, need to deal with that separately
+  #                                        ifelse(sRank_==-1, NA,                # else if unacceptable - don't know which students are worse
+  #                                               sRank_+1)))                           # else - higher ranked student is better (or NA if unknown ranking)
+  #  
+  #  # get the R-style row indices IDs of better and worse alternatives
+  #  # these are needed to bound valuations using the submitted rank order lists
+  #  data <- dplyr::left_join(x=data, y=data[data$sRank_>0, c('cid_','sRank_','ID_')], 
+  #                           by=c('cid_'='cid_','sRank_better'='sRank_'),
+  #                           suffix=c('','sBetter'))
+  #  data <- dplyr::left_join(x=data, y=data[data$sRank_>0, c('cid_','sRank_','ID_')], 
+  #                           by=c('cid_'='cid_','sRank_worse'='sRank_'),
+  #                           suffix=c('','sWorse'))
+  #  
+  #  # encode some more information in these indices
+  #  # 0 -- NA, no better/worse is determined
+  #  # >=1 -- ID_, R-style index of better / worse alternative
+  #  # for ID_sWorse: 
+  #  #   -1 indicates that obs is the last ranked, so lower bound is max of unacceptable IDs
+  #  #   -2 indicates that the current option is unacceptable (so there is no lower bound)            
+  #  data$ID_sBetter[is.na(data$ID_sBetter) | is.na(data$sRank_)] <- 0
+  #  data$ID_sWorse[is.na(data$ID_sWorse) | is.na(data$sRank_)] <- 0
+  #  data$ID_sWorse[data$sRank_==data$sRank_max & !is.na(data$sRank_max)] <- -1
+  #  data$ID_sWorse[data$sRank_==-1] <- -2
+  #  data$sRank_[is.na(data$sRank_)] <- 0 # encode NA as 0 too
+  #  
+  #  data$sRank_better <- data$sRank_worse <- NULL
+  #  
+  #} else {
+  #  cat("Colleges' rank variables not provided ...\n")
+  #  data$sRank_ <- data$ID_sBetter <- data$ID_sWorse <- data$sRank_max <- 0
+  #}
   
   
   
@@ -427,8 +427,8 @@ stabest2.default <- function(student.prefs, college.prefs,
                           sid=data$sid_,
                           ID_cBetter=data$ID_cBetter,
                           ID_cWorse=data$ID_cWorse,
-                          ID_sBetter=data$ID_sBetter,
-                          ID_sWorse=data$ID_sWorse,
+                          #ID_sBetter=data$ID_sBetter,
+                          #ID_sWorse=data$ID_sWorse,
                           ID_nextCollege = data$ID_nextCollege,
                           niter=niter,
                           thin=thin,

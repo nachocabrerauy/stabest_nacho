@@ -63,8 +63,8 @@ List stabest2_internal(
     Rcpp::IntegerVector sid, // student id of an observation (R indexing)
     Rcpp::IntegerVector ID_cBetter, // ID_ of a better college (R indexing), 0 if NA
     Rcpp::IntegerVector ID_cWorse, // ID_ of a worse college (R indexing), 0 if NA, -1 max of all unacceptable ones, -2 = used to indicate unacceptable
-    Rcpp::IntegerVector ID_sBetter, // ID_ of a better student (R indexing), 0 if NA
-    Rcpp::IntegerVector ID_sWorse, // ID_ of a worse student (R indexing), 0 if NA, -1 max of all unacceptable ones, -2 = used to indicate unacceptable
+    //Rcpp::IntegerVector ID_sBetter, // ID_ of a better student (R indexing), 0 if NA
+    //Rcpp::IntegerVector ID_sWorse, // ID_ of a worse student (R indexing), 0 if NA, -1 max of all unacceptable ones, -2 = used to indicate unacceptable
     Rcpp::IntegerVector ID_nextCollege, // ID_ of the next obs with the current student and another college (R indexing), it cycles
     int niter,
     int thin,
@@ -86,13 +86,13 @@ List stabest2_internal(
   int nColleges = VacantSeats.size();
   assert( nObs_college.size() == nColleges );
   assert( VacantSeats.size() == nColleges );
-  unsigned int nData = Vc.size();
+  //unsigned int nData = Vc.size();
   assert( Vs.size() == nData );
   assert( Xc.n_rows == nData );
   //assert( Xs.n_rows == nData );
-  assert( ID_sBetter.size() == nData );
+  //assert( ID_sBetter.size() == nData );
   assert( ID_cBetter.size() == nData );
-  assert( ID_sWorse.size() == nData );
+  //assert( ID_sWorse.size() == nData );
   assert( ID_cWorse.size() == nData );
   assert( ID_nextCollege.size() == nData );
   assert( sid.size() == nData );
@@ -199,7 +199,7 @@ List stabest2_internal(
   for(int c=0; c <nColleges; c++){
     for(int j=0; j < nObs_college[c]; j++){
       s = sid[idx_cs] - 1; // data could be irregular so that we need a lookup for the student here, converted to C indexing
-    //  if (match[idx_cs]) Vs_min[c] = std::min(Vs_min[c], Vs[idx_cs]); // update the minimum of the college's valuation over all matched students
+      //  if (match[idx_cs]) Vs_min[c] = std::min(Vs_min[c], Vs[idx_cs]); // update the minimum of the college's valuation over all matched students
       if (ID_cWorse[idx_cs]==-2) Vc_maxUnacceptable[s] = std::max(Vc_maxUnacceptable[s], Vc[idx_cs]); // if c is unacceptable to s, update max of unacceptable valuations
       //#ifdef DEBUG
       //Rcpp::Rprintf("c=%d, idx=%d, ID_cWorse=%d, Vs_maxUnacceptable=%f, Xs_gamma=%f, ", c, idx_cs, ID_sWorse[idx_cs], Vs_maxUnacceptable[c], Vs[idx_cs]);
@@ -316,7 +316,7 @@ List stabest2_internal(
             // if s is not unacceptable to school c AND
             //   - student's valuation is higher than minimum of college's students (so college prefers student) [Eqn (A4)] OR
             //   - c has a vacant seat ...
-            if( ID_sWorse[idx_cs]!=-2 && (( Vs_cs > Vs_min_c ) || HasVacantSeats_c ) ){
+            if(( Vs_cs > Vs_min_c ) || HasVacantSeats_c){
               // ... then college's valuation has to be lower than that of student's equilibrium college
               Vcupperbar = std::min( Vcupperbar, Vc[idx_eqCollege_s] ); 
             }
@@ -336,7 +336,7 @@ List stabest2_internal(
               // if s is not unacceptable to cprime AND
               //   - student's valuation is higher than minimum of cprime's students (so college prefers student) [Eqn (A6)] OR
               //   - cprime has a vacant seat ...
-              if( ID_sWorse[idx_cprimes]!=-2 && ( Vs[idx_cprimes] > Vs_min[cprime] || VacantSeats[cprime] ) ){
+              if( Vs[idx_cprimes] > Vs_min[cprime] || VacantSeats[cprime] ) {
                 
                 // ... then student must value college i higher than iprime [Eqn (A11) = Eqn (A15_b), term 1]
                 Vclowerbar = std::max( Vclowerbar, Vc[idx_cprimes] ); 
