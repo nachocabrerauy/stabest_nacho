@@ -378,8 +378,8 @@ stabest2.default <- function(student.prefs,
   } else {
     stopifnot(length(initparm$beta)==students.nCoef)
     # stopifnot(length(initparm$gamma)==college.nCoef)
-    beta <- matrix(initparm, ncol=1, nrow=students.nCoef)
-    #  gamma <- matrix(initparm, ncol=1, nrow=college.nCoef)
+    beta <- matrix(initparm$beta, ncol=1, nrow=students.nCoef)
+    #  gamma <- matrix(initparm$gamma, ncol=1, nrow=college.nCoef)
   }
   
   
